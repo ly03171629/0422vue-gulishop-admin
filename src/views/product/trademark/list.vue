@@ -13,8 +13,18 @@
       </el-table-column>
       <el-table-column label="操作">
         <template slot-scope="{row,$index}">
-          <el-button type="warning" icon="el-icon-edit" size="mini" @click="showUpdateDialog(row)">修改</el-button>
-          <el-button type="danger" icon="el-icon-delete" size="mini">删除</el-button>
+          <el-button
+            type="warning"
+            icon="el-icon-edit"
+            size="mini"
+            @click="showUpdateDialog(row)"
+          >修改</el-button>
+          <el-button
+            type="danger"
+            icon="el-icon-delete"
+            size="mini"
+            @click="deleteTrademark(row)"
+          >删除</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -30,7 +40,7 @@
       :total="total"
     ></el-pagination>
 
-    <el-dialog title="添加品牌" :visible.sync="isShowDialog">
+    <el-dialog :title="`${form.id?'修改':'添加'}品牌`" :visible.sync="isShowDialog">
       <el-form :model="form" style="width:80%">
         <el-form-item label="品牌名称" :label-width="'100px'">
           <el-input v-model="form.tmName" autocomplete="off"></el-input>
@@ -62,10 +72,12 @@ export default {
   name: "Trademark",
   data() {
     return {
+      //列表页的数据
       page: 1,
       limit: 3,
       total: 0,
       trademarkList: [],
+
       isShowDialog: false,
       form: {
         tmName: "",
@@ -104,11 +116,12 @@ export default {
     },
 
     //点击修改按钮，弹出对话框（和添加）
-    showUpdateDialog(row){
-      this.isShowDialog = true
-      this.form = row
+    showUpdateDialog(row) {
+      this.isShowDialog = true;
+      // this.form = row
+      //form和row(trademarkList当中的对象) 是同一个对象（地址一样） 修改form就相当于修改row
+      this.form = { ...row }; //浅拷贝一个新的对象  必须和row不是同一个
     },
-
 
     //上传成功后的处理
     handleAvatarSuccess(res, file) {
@@ -144,17 +157,56 @@ export default {
           //3-1  关闭dialog
           this.isShowDialog = false;
           //3-2  重新发请求拿列表数据
-          this.getTrademarkList(); //添加的时候默认添加再最后一个，重新发请求我们拿的是第一页
+          this.getTrademarkList(trademark.id ? this.page : 1);
+          //添加的时候默认添加再最后一个，重新发请求我们拿的是第一页
+          //修改的时候默认修改完成还是停留在当前这一页的列表
+
           //3-3  提示一下
-          this.$message.success("添加品牌成功");
+          this.$message.success(`${trademark.id ? "修改" : "添加"}品牌成功`);
         } else {
           //4、失败干啥（提示）
-          this.$message.error("添加品牌失败");
+          this.$message.error(`${trademark.id ? "修改" : "添加"}品牌失败`);
         }
       } catch (error) {
         //发送ajax请求失败
         this.$message.error(error.message);
       }
+    },
+
+    deleteTrademark(row) {
+      this.$confirm(`你确定删除${row.tmName}吗？`, "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+      })
+        .then(async () => {
+          //点击确定按钮
+          //发请求
+          try {
+            const result = await this.$API.trademark.delete(row.id);
+            //成功
+            if (result.code === 200) {
+              //提示
+              this.$message.success("删除品牌成功");
+              //重新获取列表数据
+              this.getTrademarkList(
+                this.trademarkList.length > 1 ? this.page : this.page - 1
+              );
+            } else {
+              //失败
+              this.$message.error("删除品牌失败");
+            }
+          } catch (error) {
+            this.$message.error("发送请求失败");
+          }
+        })
+        .catch(() => {
+          //点击取消按钮
+          this.$message({
+            type: "info",
+            message: "已取消删除",
+          });
+        });
     },
   },
 };
