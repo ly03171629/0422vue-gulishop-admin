@@ -40,7 +40,10 @@ module.exports = {
       errors: true
     },
     //before: require('./mock/mock-server.js'),
-    proxy: {
+    proxy: {  //localhost:9528
+      // localhost:9528/admin/product/fileUpload    404
+      // localhost:9528/dev-api/admin/product/fileUpload
+      // http://182.92.128.115/admin/product/fileUpload
       '/dev-api': { // 匹配所有以 '/dev-api'开头的请求路径
         target: 'http://182.92.128.115', // 代理目标的基础路径
         // target: 'http://47.93.148.192',

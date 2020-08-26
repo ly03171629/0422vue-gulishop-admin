@@ -13,7 +13,7 @@
       </el-table-column>
       <el-table-column label="操作">
         <template slot-scope="{row,$index}">
-          <el-button type="warning" icon="el-icon-edit" size="mini">修改</el-button>
+          <el-button type="warning" icon="el-icon-edit" size="mini" @click="showUpdateDialog(row)">修改</el-button>
           <el-button type="danger" icon="el-icon-delete" size="mini">删除</el-button>
         </template>
       </el-table-column>
@@ -38,7 +38,7 @@
         <el-form-item label="品牌LOGO" :label-width="'100px'">
           <el-upload
             class="avatar-uploader"
-            action="https://jsonplaceholder.typicode.com/posts/"
+            action="/dev-api/admin/product/fileUpload"
             :show-file-list="false"
             :on-success="handleAvatarSuccess"
             :before-upload="beforeAvatarUpload"
@@ -51,7 +51,7 @@
       </el-form>
       <div slot="footer" class="dialog-footer">
         <el-button @click="isShowDialog = false">取 消</el-button>
-        <el-button type="primary" @click="isShowDialog = false">确 定</el-button>
+        <el-button type="primary" @click="save">确 定</el-button>
       </div>
     </el-dialog>
   </div>
@@ -69,7 +69,7 @@ export default {
       isShowDialog: false,
       form: {
         tmName: "",
-        logoUrl:''
+        logoUrl: "",
       },
     };
   },
@@ -96,22 +96,65 @@ export default {
     //点击添加按钮，弹出对话框
     showAddDialog() {
       this.isShowDialog = true;
+      // 为了解决添加后取消，再点击添加数据仍然存在的bug
+      this.form = {
+        tmName: "",
+        logoUrl: "",
+      };
     },
 
+    //点击修改按钮，弹出对话框（和添加）
+    showUpdateDialog(row){
+      this.isShowDialog = true
+      this.form = row
+    },
+
+
+    //上传成功后的处理
     handleAvatarSuccess(res, file) {
-      this.imageUrl = URL.createObjectURL(file.raw);
+      // console.log(res,file) // res是上传成功后图片所在服务器上的路径，真是的线上路径，我们要的是它
+      // console.log(URL.createObjectURL(file.raw)) //本地图片的路径，我们要的不是它
+      this.form.logoUrl = res.data; //真正的收集上传成功的图片路径
     },
-    beforeAvatarUpload(file) {
-      const isJPG = file.type === "image/jpeg";
-      const isLt2M = file.size / 1024 / 1024 < 2;
 
-      if (!isJPG) {
-        this.$message.error("上传头像图片只能是 JPG 格式!");
+    //上传之前的处理
+    //其实就是让你在上传之前对文件进行一下子限制
+    beforeAvatarUpload(file) {
+      const fileTypes = ["image/jpeg", "image/png"];
+      const isJPGOrPNG = fileTypes.indexOf(file.type) !== -1;
+      const isLt500K = file.size / 1024 < 500;
+
+      if (!isJPGOrPNG) {
+        this.$message.error("上传头像图片只能是 JPG 格式或者 PNG格式!");
       }
-      if (!isLt2M) {
-        this.$message.error("上传头像图片大小不能超过 2MB!");
+      if (!isLt500K) {
+        this.$message.error("上传头像图片大小不能超过 500KB!");
       }
-      return isJPG && isLt2M;
+      return isJPGOrPNG && isLt500K; //只有都为true才符合我们的限制需求
+    },
+
+    async save() {
+      //1、获取请求所需的参数
+      let trademark = this.form;
+      //2、发请求
+      try {
+        const result = await this.$API.trademark.addOrUpdate(trademark);
+        if (result.code === 200) {
+          //3、成功干啥
+          //3-1  关闭dialog
+          this.isShowDialog = false;
+          //3-2  重新发请求拿列表数据
+          this.getTrademarkList(); //添加的时候默认添加再最后一个，重新发请求我们拿的是第一页
+          //3-3  提示一下
+          this.$message.success("添加品牌成功");
+        } else {
+          //4、失败干啥（提示）
+          this.$message.error("添加品牌失败");
+        }
+      } catch (error) {
+        //发送ajax请求失败
+        this.$message.error(error.message);
+      }
     },
   },
 };
