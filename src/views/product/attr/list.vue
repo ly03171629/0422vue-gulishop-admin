@@ -26,7 +26,7 @@
           </el-table-column>
           <el-table-column prop="prop" label="操作" width="150">
             <template slot-scope="{row,$index}">
-              <HintButton icon="el-icon-edit" type="warning" size="mini" title="修改属性"></HintButton>
+              <HintButton icon="el-icon-edit" type="warning" size="mini" title="修改属性" @click="showUpdateDiv(row)"></HintButton>
               <HintButton icon="el-icon-delete" type="danger" size="mini" title="删除属性"></HintButton>
             </template>
           </el-table-column>
@@ -40,27 +40,23 @@
           </el-form-item>
         </el-form>
 
-        <el-button type="primary" icon="el-icon-plus">添加属性值</el-button>
+        <el-button
+          type="primary"
+          icon="el-icon-plus"
+          :disabled="!form.attrName"
+          @click="addAttrValue"
+        >添加属性值</el-button>
         <el-button @click="isShowList = true">取消</el-button>
 
-        <el-table
-          border
-          style="width: 100%;margin:20px 0">
-          <el-table-column
-            align="center"
-            type="index"
-            label="序号"
-            width="80">
+        <el-table border style="width: 100%;margin:20px 0" :data="form.attrValueList">
+          <el-table-column align="center" type="index" label="序号" width="80"></el-table-column>
+          <el-table-column prop="valueName" label="属性值名称" width="width">
+            <template slot-scope="{row,$index}">
+              <el-input v-model="row.valueName" placeholder="请输入属性值"></el-input>
+            </template>
+            
           </el-table-column>
-          <el-table-column
-            prop="prop"
-            label="属性值名称"
-            width="width">
-          </el-table-column>
-          <el-table-column
-            label="操作"
-            width="width">
-          </el-table-column>
+          <el-table-column label="操作" width="width"></el-table-column>
         </el-table>
         <el-button type="primary">保存</el-button>
         <el-button @click="isShowList = true">取消</el-button>
@@ -70,6 +66,8 @@
 </template>
 
 <script>
+import cloneDeep from 'lodash/cloneDeep'
+
 export default {
   name: "Attr",
   data() {
@@ -95,10 +93,10 @@ export default {
       // },
 
       form: {
-        attrName:'',
-        attrValueList:[],
-        categoryId: '',
-        categoryLevel:3
+        attrName: "",
+        attrValueList: [],
+        categoryId: "",
+        categoryLevel: 3,
       },
     };
   },
@@ -138,6 +136,29 @@ export default {
 
     showAddDiv() {
       this.isShowList = false;
+      //解决添加之后取消，完啦再添加数据依然存在的bug
+      this.form = {
+        attrName: "",
+        attrValueList: [],
+        categoryId: this.category3Id,
+        categoryLevel: 3,
+      }
+    },
+
+    showUpdateDiv(row){
+      this.isShowList = false;
+      //浅拷贝已经解决不了我们的问题
+      //浅拷贝拷贝row当中的数组（对象数据）仍然拷贝的是地址 使用深拷贝去解决
+      // this.form = {...row}
+      this.form = cloneDeep(row)
+
+    },
+
+    addAttrValue() {
+      this.form.attrValueList.push({
+        attrId: this.form.id, //form当中有id就拿form的id  没有就是undefined
+        valueName: "",
+      });0
     },
   },
 };
