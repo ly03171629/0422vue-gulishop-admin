@@ -41,11 +41,11 @@
     ></el-pagination>
 
     <el-dialog :title="`${form.id?'修改':'添加'}品牌`" :visible.sync="isShowDialog">
-      <el-form :model="form" style="width:80%">
-        <el-form-item label="品牌名称" :label-width="'100px'">
+      <el-form :model="form" style="width:80%" :rules="rules" ref="form">
+        <el-form-item label="品牌名称" :label-width="'100px'" prop="tmName">
           <el-input v-model="form.tmName" autocomplete="off"></el-input>
         </el-form-item>
-        <el-form-item label="品牌LOGO" :label-width="'100px'">
+        <el-form-item label="品牌LOGO" :label-width="'100px'" prop="logoUrl">
           <el-upload
             class="avatar-uploader"
             action="/dev-api/admin/product/fileUpload"
@@ -71,6 +71,7 @@
 export default {
   name: "Trademark",
   data() {
+    
     return {
       //列表页的数据
       page: 1,
@@ -83,6 +84,21 @@ export default {
         tmName: "",
         logoUrl: "",
       },
+      rules: {
+        tmName: [
+          { required: true, message: "请输入品牌名称", trigger: "blur" },
+          // {
+          //   min: 2,
+          //   max: 10,
+          //   message: "长度在 2 到 10 个字符",
+          //   trigger: "change",
+          // },
+          { validator: this.validateTmName, trigger: 'change' }//validateTmName自定义的验证规则功能函数
+        ],
+        logoUrl: [
+          { required: true, message: "请上传品牌LOGO", trigger: "change" },
+        ],
+      },
     };
   },
   mounted() {
@@ -90,6 +106,19 @@ export default {
     this.getTrademarkList();
   },
   methods: {
+
+    //自定义的验证规则功能函数
+    validateTmName:(rule, value, callback) => {
+      //callback 是验证完成之后的回调函数
+      //如果传入了错误的信息参数，那么代表验证失败
+      //如果没有传入任何的参数，代表验证通过
+        if (value.length < 2 || value.length > 10) {
+          callback(new Error('长度在2到10之间'));
+        } else {
+          callback();
+        }
+    },
+
     async getTrademarkList(page = 1) {
       this.page = page;
       const result = await this.$API.trademark.getPageList(
@@ -146,31 +175,41 @@ export default {
       return isJPGOrPNG && isLt500K; //只有都为true才符合我们的限制需求
     },
 
-    async save() {
-      //1、获取请求所需的参数
-      let trademark = this.form;
-      //2、发请求
-      try {
-        const result = await this.$API.trademark.addOrUpdate(trademark);
-        if (result.code === 200) {
-          //3、成功干啥
-          //3-1  关闭dialog
-          this.isShowDialog = false;
-          //3-2  重新发请求拿列表数据
-          this.getTrademarkList(trademark.id ? this.page : 1);
-          //添加的时候默认添加再最后一个，重新发请求我们拿的是第一页
-          //修改的时候默认修改完成还是停留在当前这一页的列表
+    save() {
+      this.$refs.form.validate(async (valid) => {
+        if (valid) {
+          //valid就是验证后的结果  如果为真就代表验证成功，如果为假代表失败（不会提交的，会触发验证错误消息）
+          //1、获取请求所需的参数
+          let trademark = this.form;
+          //2、发请求
+          try {
+            const result = await this.$API.trademark.addOrUpdate(trademark);
+            if (result.code === 200) {
+              //3、成功干啥
+              //3-1  关闭dialog
+              this.isShowDialog = false;
+              //3-2  重新发请求拿列表数据
+              this.getTrademarkList(trademark.id ? this.page : 1);
+              //添加的时候默认添加再最后一个，重新发请求我们拿的是第一页
+              //修改的时候默认修改完成还是停留在当前这一页的列表
 
-          //3-3  提示一下
-          this.$message.success(`${trademark.id ? "修改" : "添加"}品牌成功`);
+              //3-3  提示一下
+              this.$message.success(
+                `${trademark.id ? "修改" : "添加"}品牌成功`
+              );
+            } else {
+              //4、失败干啥（提示）
+              this.$message.error(`${trademark.id ? "修改" : "添加"}品牌失败`);
+            }
+          } catch (error) {
+            //发送ajax请求失败
+            this.$message.error(error.message);
+          }
         } else {
-          //4、失败干啥（提示）
-          this.$message.error(`${trademark.id ? "修改" : "添加"}品牌失败`);
+          console.log("error submit!!");
+          return false;
         }
-      } catch (error) {
-        //发送ajax请求失败
-        this.$message.error(error.message);
-      }
+      });
     },
 
     deleteTrademark(row) {
