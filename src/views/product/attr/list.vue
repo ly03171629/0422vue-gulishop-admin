@@ -1,7 +1,7 @@
 <template>
   <div>
     <el-card>
-      <CategorySelector @changeCategory="changeCategory"></CategorySelector>
+      <CategorySelector @changeCategory="changeCategory" :isShowList="isShowList"></CategorySelector>
     </el-card>
 
     <el-card style="margin-top:20px">
@@ -35,7 +35,16 @@
                 title="修改属性"
                 @click="showUpdateDiv(row)"
               ></HintButton>
-              <HintButton icon="el-icon-delete" type="danger" size="mini" title="删除属性"></HintButton>
+
+              <el-popconfirm title="这是一段内容确定删除吗？" @onConfirm="deleteAttr(row)">
+                <HintButton
+                  slot="reference"
+                  icon="el-icon-delete"
+                  type="danger"
+                  size="mini"
+                  title="删除属性"
+                ></HintButton>
+              </el-popconfirm>
             </template>
           </el-table-column>
         </el-table>
@@ -78,12 +87,18 @@
           <el-table-column label="操作" width="width">
             <template slot-scope="{row,$index}">
               <el-popconfirm title="这是一段内容确定删除吗？" @onConfirm="form.attrValueList.splice($index,1)">
-                <HintButton slot="reference" icon="el-icon-delete" size="mini" title="删除属性值" type="danger"></HintButton>
+                <HintButton
+                  slot="reference"
+                  icon="el-icon-delete"
+                  size="mini"
+                  title="删除属性值"
+                  type="danger"
+                ></HintButton>
               </el-popconfirm>
             </template>
           </el-table-column>
         </el-table>
-        <el-button type="primary">保存</el-button>
+        <el-button type="primary" @click="save" :disabled="form.attrValueList.length === 0">保存</el-button>
         <el-button @click="isShowList = true">取消</el-button>
       </div>
     </el-card>
@@ -239,6 +254,56 @@ export default {
         this.$refs[index].focus();
       });
     },
+
+    async save() {
+      //获取参数数据
+      let attr = this.form;
+
+      //对数据进行整理
+      // 1、过滤掉属性当中属性值为空串的，同时去除参数中多余的参数，比如自己加的isEdit
+      attr.attrValueList = attr.attrValueList.filter(item => {
+        if(item.valueName !== ''){
+          delete item.isEdit;
+          return true
+        }
+      })
+
+      // 2、如果属性当中属性值列表没有属性值对象 不发请求
+      if (attr.attrValueList.length === 0) {
+        this.$message.warning("属性当中必须有属性值");
+        return;
+      }
+
+
+      // let arr = [1,2,3,4]
+      // arr = arr.filter(item => {
+      //   return item > 1
+      // })
+      // console.log(arr)
+
+
+      //发请求
+      const result = await this.$API.attr.addOrUpdate(attr);
+      if (result.code === 200) {
+        //成功
+        this.$message.success("保存属性成功");
+        this.getAttrList();
+        this.isShowList = true;
+      } else {
+        //失败
+        this.$message.error("保存属性失败");
+      }
+    },
+
+    async deleteAttr(row){
+      const result = await this.$API.attr.delete(row.id)
+      if(result.code === 200){
+        this.$message.success('删除属性成功')
+        this.getAttrList()
+      }else{
+        this.$message.error('删除属性失败')
+      }
+    }
   },
 };
 </script>
