@@ -222,11 +222,20 @@ export default {
       //属性值必须有有意义的值
       if (row.valueName.trim() === "") {
         this.$message.warning("属性值必须有值");
-        row.valueName = "";
+        if(this.form.id){
+          row.valueName = this.originValue
+          row.isEdit = false
+        }else{
+          row.valueName = "";
+        }
         return;
       }
 
       //除了自身的属性值之外，不允许其它的属性值和这个值一样
+      //some  
+      //功能：查找数组当中符合最终要求的一个  如果有一个是符合的 就返回true  如果都不符合才返回false
+      //参数： 回调函数（item  index   arr）
+      //返回值： boolean true/false
       let repeate = this.form.attrValueList.some((item) => {
         if (item !== row) {
           return item.valueName.trim() === row.valueName.trim();
@@ -244,6 +253,7 @@ export default {
 
     // 点击span后，改变模式为编辑模式
     toEdit(row, index) {
+      this.originValue = row.valueName
       row.isEdit = true;
 
       //自动获取焦点  让目前点击的这个span所对应的input获取焦点

@@ -45,7 +45,7 @@
         ></el-pagination>
       </div>
 
-      <SpuForm v-show="isShowSpuForm" :visible.sync="isShowSpuForm"></SpuForm>
+      <SpuForm v-show="isShowSpuForm" :visible.sync="isShowSpuForm" ref="spu"></SpuForm>
       <!-- <SpuForm v-show="isShowSpuForm" :visible="isShowSpuForm" @update:visible="isShowSpuForm = $event"></SpuForm> -->
 
       <SkuForm v-show="isShowSkuForm"></SkuForm>
@@ -118,9 +118,13 @@ export default {
     //点击添加和修改spu及点击添加sku 各个页面之间的切换
     showAddSpuForm() {
       this.isShowSpuForm = true;
+      this.$refs.spu.initAddSpuData()
     },
     showUpdateSpuForm(row){
       this.isShowSpuForm = true;
+      //通知子组件发送请求获取初始化展示的数据
+      this.$refs.spu.initUpdateSpuData(row)
+
     },
     showAddSkuForm(row){
       this.isShowSkuForm = true;

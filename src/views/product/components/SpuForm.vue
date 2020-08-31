@@ -26,6 +26,7 @@
           list-type="picture-card"
           :on-preview="handlePictureCardPreview"
           :on-remove="handleRemove"
+          :on-success="handleSuccess"
           :file-list="spuImageList"
         >
           <i class="el-icon-plus"></i>
@@ -36,10 +37,18 @@
       </el-form-item>
 
       <el-form-item label="销售属性">
-        <el-select placeholder="还有三个未选择" value>
-          <el-option value></el-option>
+        <el-select
+          :placeholder="unUsedBaseSaleAttrList.length > 0?`还有${unUsedBaseSaleAttrList.length}个未选择`:'没有啦！！！'"
+          v-model="attrIdattrName"
+        >
+          <el-option
+            :label="unUsedBaseSaleAttr.name"
+            :value="`${unUsedBaseSaleAttr.id}:${unUsedBaseSaleAttr.name}`"
+            v-for="(unUsedBaseSaleAttr, index) in unUsedBaseSaleAttrList"
+            :key="unUsedBaseSaleAttr.id"
+          ></el-option>
         </el-select>
-        <el-button type="primary" icon="el-icon-plus">添加销售属性</el-button>
+        <el-button type="primary" icon="el-icon-plus" @click="addSaleAttr">添加销售属性</el-button>
         <el-table border style="width: 100%;margin-top:20px" :data="spuInfo.spuSaleAttrList">
           <el-table-column align="center" type="index" label="序号" width="80"></el-table-column>
           <el-table-column prop="saleAttrName" label="属性名" width="150"></el-table-column>
@@ -64,7 +73,7 @@
                 size="small"
               ></el-input>
               <!--  @keyup.enter.native="handleInputConfirm"
-                @blur="handleInputConfirm" -->
+              @blur="handleInputConfirm"-->
               <el-button v-else class="button-new-tag" size="small">+添加属性值</el-button>
               <!--  @click="showInput" -->
             </template>
@@ -94,22 +103,93 @@ export default {
       dialogImageUrl: "",
       dialogVisible: false,
       spu: "",
+      attrIdattrName: "",
       spuInfo: {
         spuName: "",
         tmId: "",
         description: "",
         spuSaleAttrList: [],
       },
-      spuImageList: [],
+      spuImageList: [], //获取到的图片列表
       trademarkList: [],
       baseSaleAttrList: [],
+      imgList: [], //收集的图片列表
     };
   },
+
+  // {
+  //   "category3Id": 0,
+  //   "description": "string",
+  //   "spuImageList": [
+  //     {
+  //       "id": 0,
+  //       "imgName": "string",
+  //       "imgUrl": "string",
+  //       "spuId": 0
+  //     }
+  //   ],
+  //   "spuName": "string",
+  //   "spuSaleAttrList": [
+  //     {
+  //       "baseSaleAttrId": 0,
+  //       "id": 0,
+  //       "saleAttrName": "string",
+  //       "spuId": 0,
+  //       "spuSaleAttrValueList": [
+  //         {
+  //           "baseSaleAttrId": 0,
+  //           "id": 0,
+  //           "isChecked": "string",
+  //           "saleAttrName": "string",
+  //           "saleAttrValueName": "string",
+  //           "spuId": 0
+  //         }
+  //       ]
+  //     }
+  //   ],
+  //   "tmId": 0
+  // }
+
   methods: {
+    //点击添加spu销售属性
+    //本质就是往spuInfo.spuSaleAttrList数组当中明push一个规定格式的对象
+    addSaleAttr() {
+      //把规定格式的对象给构造好
+      // {
+      //       "baseSaleAttrId": 0,
+      //       "saleAttrName": "string",
+      //       "spuId": 0,
+      //       "spuSaleAttrValueList": []
+      // }
+      let [baseSaleAttrId,saleAttrName] = this.attrIdattrName.split(':')
+      let spuId = this.spu.id
+      let spuSaleAttrValueList = []
+
+      let attr ={
+        baseSaleAttrId,
+        saleAttrName,
+        spuId,
+        spuSaleAttrValueList
+      }
+
+      this.spuInfo.spuSaleAttrList.push(attr);
+
+      this.attrIdattrName = ''
+    },
+
+    //图片被删除的时候调用
     handleRemove(file, fileList) {
       console.log(file, fileList);
+      this.imgList = fileList; //把删除剩余的图片列表收集起来
     },
+    //图片上传成功后调用
+    handleSuccess(response, file, fileList) {
+      console.log(response, file, fileList);
+      this.imgList = fileList; //把添加完成的图片列表收集起来
+    },
+
     handlePictureCardPreview(file) {
+      //点击显示大图的操作
       this.dialogImageUrl = file.url;
       this.dialogVisible = true;
     },
@@ -157,23 +237,32 @@ export default {
       this.baseSaleAttrList = result.data;
     },
   },
+  computed: {
+    unUsedBaseSaleAttrList() {
+      return this.baseSaleAttrList.filter((baseSaleAttr) =>
+        this.spuInfo.spuSaleAttrList.every(
+          (spuSaleAttr) => spuSaleAttr.saleAttrName !== baseSaleAttr.name
+        )
+      );
+    },
+  },
 };
 </script>
 
 <style>
-  .el-tag + .el-tag {
-    margin-left: 10px;
-  }
-  .button-new-tag {
-    margin-left: 10px;
-    height: 32px;
-    line-height: 30px;
-    padding-top: 0;
-    padding-bottom: 0;
-  }
-  .input-new-tag {
-    width: 90px;
-    margin-left: 10px;
-    vertical-align: bottom;
-  }
+.el-tag + .el-tag {
+  margin-left: 10px;
+}
+.button-new-tag {
+  margin-left: 10px;
+  height: 32px;
+  line-height: 30px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.input-new-tag {
+  width: 90px;
+  margin-left: 10px;
+  vertical-align: bottom;
+}
 </style>
