@@ -59,36 +59,47 @@
                 v-for="(spuSaleAttrValue,index) in row.spuSaleAttrValueList"
                 closable
                 :disable-transitions="false"
+                @close="row.spuSaleAttrValueList.splice(index,1)"
               >{{spuSaleAttrValue.saleAttrValueName}}</el-tag>
-              <!-- @close="handleClose(tag)" -->
 
               <!-- row.isEidt是后面我们编辑模式和查看模式的依据 我们把这个数据放在属性身上而不是属性值身上
               因为每个属性同时只能出现一个input  row.saleAttrValueName代表input到时候收集的属性值名称数据，先暂存在属性身上,后面
               用到了要从这个属性身上去拿的-->
               <el-input
                 class="input-new-tag"
-                v-if="row.isEidt"
+                v-if="row.isEdit"
                 v-model="row.saleAttrValueName"
                 ref="saveTagInput"
                 size="small"
+                @keyup.enter.native="handleInputConfirm(row)"
+                @blur="handleInputConfirm(row)"
               ></el-input>
-              <!--  @keyup.enter.native="handleInputConfirm"
-              @blur="handleInputConfirm"-->
-              <el-button v-else class="button-new-tag" size="small">+添加属性值</el-button>
-              <!--  @click="showInput" -->
+
+              <el-button v-else class="button-new-tag" size="small" @click="showInput(row)">+添加属性值</el-button>
             </template>
           </el-table-column>
           <el-table-column label="操作" width="150">
             <template slot-scope="{row,$index}">
-              <HintButton size="mini" type="danger" icon="el-icon-delete" title="删除销售属性"></HintButton>
+              <el-popconfirm
+                title="这是一段内容确定删除吗？"
+                @onConfirm="spuInfo.spuSaleAttrList.splice($index,1)"
+              >
+                <HintButton
+                  slot="reference"
+                  size="mini"
+                  type="danger"
+                  icon="el-icon-delete"
+                  title="删除销售属性"
+                ></HintButton>
+              </el-popconfirm>
             </template>
           </el-table-column>
         </el-table>
       </el-form-item>
 
       <el-form-item>
-        <el-button type="primary">保存</el-button>
-        <el-button @click="$emit('update:visible',false)">取消</el-button>
+        <el-button type="primary" @click="save">保存</el-button>
+        <el-button @click="cancel">取消</el-button>
       </el-form-item>
     </el-form>
   </div>
@@ -148,9 +159,143 @@ export default {
   //     }
   //   ],
   //   "tmId": 0
-  // }
+  // },
 
   methods: {
+
+    cancel(){
+      this.$emit('cancelBack')
+      this.resetData()
+    },  
+
+    resetData(){
+      this.dialogImageUrl = ""
+      this.dialogVisible = false
+      this.spu = ""
+      this.attrIdattrName = ""
+      this.spuInfo = {
+        spuName: "",
+        tmId: "",
+        description: "",
+        spuSaleAttrList: [],
+      }
+      this.spuImageList = []//获取到的图片列表
+      this.trademarkList = []
+      this.baseSaleAttrList = []
+      this.imgList = [] //收集的图片列表
+    },
+
+
+
+    async save() {
+      //获取参数
+      let { spu, imgList, spuInfo } = this;
+
+      //整理参数
+      //1、整理图片
+      //    {
+      //       "imgName": "string",
+      //       "imgUrl": "string",
+      //       "spuId": 0
+      //     }
+      imgList = imgList.map(item => {
+        return {
+          imgName:item.imgName || item.name,
+          imgUrl:item.imgUrl || item.response.data,
+          spuId:spu.id
+        }
+      })
+
+      spuInfo.spuImageList = imgList
+      
+
+      //2、自己添加的一些参数需要去除
+      spuInfo.spuSaleAttrList.forEach(item => {
+        delete item.isEdit
+        delete item.saleAttrValueName
+      })
+
+      //3、category3Id需要加上
+      spuInfo.category3Id = spu.category3Id
+      console.log(spuInfo)
+
+      //发送请求
+      const result = await this.$API.spu.addUpdate(spuInfo)
+      if(result.code === 200){
+        //成功干啥
+        this.$message.success('保存spu成功')
+        //返回到列表页
+          // 到了列表页之后要干啥
+          // 是怎么到的列表页（添加还是修改）
+        this.$emit('saveSuccess')
+
+        //关闭添加和修改spu的页面
+        this.$emit('update:visible',false)
+
+
+        
+      }else{
+        //失败干啥
+        this.$message.error('保存spu失败')
+      }
+      //清空当前的data数据
+      this.resetData()
+    },
+
+    //失去焦点的时候或者回车的时候我们需要保存这个输入的属性值名称
+    //属性值名称我们当时是输入的时候暂存在属性身上（row）
+    handleInputConfirm(row) {
+      //1\先从row身上把属性值名称等获取到
+      let { saleAttrValueName, baseSaleAttrId, saleAttrName } = row;
+      let spuId = this.spu.id;
+      //2\构造固定格式的对象
+      let attrValue = {
+        saleAttrValueName,
+        baseSaleAttrId,
+        saleAttrName,
+        spuId,
+      };
+      // {
+      //  "baseSaleAttrId": 0,
+      //  "saleAttrName": "string",
+      //  "saleAttrValueName": "string",
+      //  "spuId": 0
+      // }
+
+      //添加之前要判断
+      //判断 1 属性值是不是为空
+      //判断 2 和其它的属性值不能重复
+      if (saleAttrValueName.trim() === "") return;
+      let repeat = row.spuSaleAttrValueList.some(
+        (item) => attrValue.saleAttrValueName === item.saleAttrValueName
+      );
+      if (repeat) {
+        this.$message.warning("属性值不能重复");
+        row.isEdit = false;
+        row.saleAttrValueName = "";
+        return;
+      }
+
+      //3\添加到对应的属性值列表当中
+      row.spuSaleAttrValueList.push(attrValue);
+
+      //4\ 再让当前的这个属性的属性值变为查看模式
+      row.isEdit = false;
+
+      //5\ 将input清空
+      row.saleAttrValueName = "";
+    },
+
+    //点击按钮变为input（编辑模式）
+
+    showInput(row) {
+      this.$set(row, "isEdit", true);
+      //自动获取焦点
+      this.$nextTick(() => {
+        this.$refs.saveTagInput.focus();
+      });
+    },
+
     //点击添加spu销售属性
     //本质就是往spuInfo.spuSaleAttrList数组当中明push一个规定格式的对象
     addSaleAttr() {
@@ -161,20 +306,19 @@ export default {
       //       "spuId": 0,
       //       "spuSaleAttrValueList": []
       // }
-      let [baseSaleAttrId,saleAttrName] = this.attrIdattrName.split(':')
-      let spuId = this.spu.id
-      let spuSaleAttrValueList = []
-
-      let attr ={
+      let [baseSaleAttrId, saleAttrName] = this.attrIdattrName.split(":");
+      baseSaleAttrId *= 1;
+      let spuId = this.spu.id;
+      let spuSaleAttrValueList = [];
+      let attr = {
         baseSaleAttrId,
         saleAttrName,
         spuId,
-        spuSaleAttrValueList
-      }
-
+        spuSaleAttrValueList,
+      };
       this.spuInfo.spuSaleAttrList.push(attr);
 
-      this.attrIdattrName = ''
+      this.attrIdattrName = "";
     },
 
     //图片被删除的时候调用

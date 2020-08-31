@@ -45,7 +45,7 @@
         ></el-pagination>
       </div>
 
-      <SpuForm v-show="isShowSpuForm" :visible.sync="isShowSpuForm" ref="spu"></SpuForm>
+      <SpuForm v-show="isShowSpuForm" :visible.sync="isShowSpuForm" ref="spu" @saveSuccess="saveSuccess" @cancelBack="cancelBack"></SpuForm>
       <!-- <SpuForm v-show="isShowSpuForm" :visible="isShowSpuForm" @update:visible="isShowSpuForm = $event"></SpuForm> -->
 
       <SkuForm v-show="isShowSkuForm"></SkuForm>
@@ -80,6 +80,7 @@ export default {
     };
   },
   methods: {
+
     changeCategory({ categoryId, level }) {
       console.log(categoryId, level);
       if (level === 1) {
@@ -121,13 +122,30 @@ export default {
       this.$refs.spu.initAddSpuData()
     },
     showUpdateSpuForm(row){
+      this.spuId = row.id  //最后为了判断是添加成功回来还是修改成功回来所添加的判断依据
       this.isShowSpuForm = true;
       //通知子组件发送请求获取初始化展示的数据
       this.$refs.spu.initUpdateSpuData(row)
-
     },
     showAddSkuForm(row){
       this.isShowSkuForm = true;
+    },
+    //是spu保存成功后返回的操作
+    saveSuccess(){
+      //怎么返回的
+      if(this.spuId){
+        //修改回来的 重新获取当前页面的列表数据
+        this.getSpuList(this.page)
+      }else{
+        //添加回来的 重新获取第一页的列表数据
+        this.getSpuList()
+      }
+      this.spuId = null //添加成功或者修改成功保存ok后把判断标识置为null，后期如果重新点击从新开始
+    },
+
+    cancelBack(){
+      this.isShowSpuForm = false  //没有使用.sync一样可以关闭添加和更新spu的页面
+      this.spuId = null
     }
 
   },
