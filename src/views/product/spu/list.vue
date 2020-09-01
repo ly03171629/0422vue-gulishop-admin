@@ -60,7 +60,7 @@
       ></SpuForm>
       <!-- <SpuForm v-show="isShowSpuForm" :visible="isShowSpuForm" @update:visible="isShowSpuForm = $event"></SpuForm> -->
 
-      <SkuForm v-show="isShowSkuForm"></SkuForm>
+      <SkuForm v-show="isShowSkuForm" :visible.sync="isShowSkuForm" ref="sku"></SkuForm>
     </el-card>
 
     <el-dialog title="收货地址" :visible.sync="isShowDialog" :before-close="handleBeforeClose">
@@ -185,6 +185,7 @@ export default {
     },
     showAddSkuForm(row) {
       this.isShowSkuForm = true;
+      this.$refs.sku.initAddSkuData(row,this.category1Id,this.category2Id)
     },
     //是spu保存成功后返回的操作
     saveSuccess() {
