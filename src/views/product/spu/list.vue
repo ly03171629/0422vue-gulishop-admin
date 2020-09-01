@@ -102,14 +102,21 @@ export default {
       total: 0,
       //只是为了传递给三级分类来控制三级分类的可操作性
       isShowList: true,
-
       //这两个数据是正儿八经的控制三个页面的切换
       isShowSkuForm: false,
       isShowSpuForm: false,
     };
   },
+  watch:{
+    //就是控制三级分类列表的可操作性
+    isShowSkuForm(val){
+      this.isShowList = !val
+    },
+    isShowSpuForm(val){
+      this.isShowList = !val
+    }
+  },
   methods: {
-
     async deleteSpu(row){
       const result = await this.$API.spu.remove(row.id)
       if(result.code === 200){
