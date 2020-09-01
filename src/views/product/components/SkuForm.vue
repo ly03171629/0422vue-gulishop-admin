@@ -21,10 +21,10 @@
             v-for="(attrInfo, index) in attrInfoList"
             :key="attrInfo.id"
           >
-            <el-select placeholder="请输入" v-model="attrId">
+            <el-select placeholder="请输入" v-model="attrInfo.attrIdAttrValueId">
               <el-option
                 :label="attrValue.valueName"
-                :value="attrValue.id"
+                :value="`${attrInfo.id}:${attrValue.id}`"
                 v-for="(attrValue, index) in attrInfo.attrValueList"
                 :key="attrValue.id"
               ></el-option>
@@ -40,7 +40,7 @@
             v-for="(spuSaleAttr, index) in spuSaleAttrList"
             :key="spuSaleAttr.id"
           >
-            <el-select placeholder="请输入" v-model="saleAttrValueId">
+            <el-select placeholder="请输入" v-model="spuSaleAttr.saleAttrValueId">
               <el-option
                 :label="spuSaleAttrValue.saleAttrValueName"
                 :value="spuSaleAttrValue.id"
@@ -71,8 +71,8 @@
       </el-form-item>
 
       <el-form-item>
-        <el-button type="primary">保存</el-button>
-        <el-button @click="$emit('update:visible',false)">取消</el-button>
+        <el-button type="primary" @click="save">保存</el-button>
+        <el-button @click="back">取消</el-button>
       </el-form-item>
     </el-form>
   </div>
@@ -87,8 +87,8 @@ export default {
       attrInfoList: [],
       spuSaleAttrList: [],
       spuImageList: [],
-      attrId: "",
-      saleAttrValueId: "",
+      // attrId: "",
+      // saleAttrValueId: "",
 
       imgList:[], //选中的图片列表
 
@@ -104,37 +104,126 @@ export default {
         weight: "",
         //第三大类： 我们需要自己整理的
         skuDefaultImg: "",
-        skuAttrValueList: [
-          {
-            attrId: 0,
-            id: 0,
-            skuId: 0,
-            valueId: 0,
-          },
-        ],
-        skuImageList: [
-          {
-            id: 0,
-            imgName: "string",
-            imgUrl: "string",
-            isDefault: "string",
-            skuId: 0,
-            spuImgId: 0,
-          },
-        ],
-        skuSaleAttrValueList: [
-          {
-            id: 0,
-            saleAttrValueId: 0,
-            skuId: 0,
-            spuId: 0,
-          },
-        ],
+        skuAttrValueList: [],
+        skuImageList: [],
+        skuSaleAttrValueList: [],
       },
     };
   },
 
   methods: {
+    
+    //点击取消的操作
+    back(){
+      this.$emit('update:visible',false)
+      this.resetData()
+    },
+
+    resetData(){
+      this.spu = {}
+      this.attrInfoList = []
+      this.spuSaleAttrList = []
+      this.spuImageList = []
+      // attrId: "",
+      // saleAttrValueId: "",
+
+      this.imgList = [] //选中的图片列表
+
+      this.skuInfo = {
+        //第一大类：父组件传过来的
+        category3Id: 0,
+        spuId: 0,
+        tmId: 0,
+        //第二大类： v-model直接收集的
+        price: 0,
+        skuDesc: "",
+        skuName: "",
+        weight: "",
+        //第三大类： 我们需要自己整理的
+        skuDefaultImg: "",
+        skuAttrValueList: [],
+        skuImageList: [],
+        skuSaleAttrValueList: [],
+      }
+    },
+
+    async save(){
+      //获取参数 
+      let {attrInfoList,spuSaleAttrList,imgList,skuInfo} = this
+      //整理参数
+      //1、整理图片
+      //  目标{
+          //   imgName: "string",
+          //   imgUrl: "string",
+          //   isDefault: "string",
+          //   spuImgId: 0,
+          // },
+
+          // 现有的
+          // id:6159
+          // imgName:"rBFUDF7ItQyAeavnAAAKVYl1Jvk512.jpg"
+          // imgUrl:"http://182.92.128.115:8080/group1/M00/00/4D/rBFUDF9NM6CAQm82AAAKVYl1Jvk634.jpg"
+          // isDefault:"0"
+          // spuId:1161
+
+        skuInfo.skuImageList = imgList.map(item => {
+          return {
+            imgName:item.imgName,
+            imgUrl:item.imgUrl,
+            isDefault:item.isDefault,
+            spuImgId:item.id
+          }
+        })
+
+        //整理平台属性值
+        attrInfoList.forEach(item => {
+          if(item.attrIdAttrValueId){
+          // {
+          //   attrId: 0,
+          //   valueId: 0,
+          // },
+            let [attrId,valueId] = item.attrIdAttrValueId.split(':')
+            skuInfo.skuAttrValueList.push({
+              attrId,
+              valueId
+            })
+          }
+        })
+
+
+        //整理销售属性值
+        // spuSaleAttrList.forEach(item => {
+        //   if(item.saleAttrValueId){
+        //     skuInfo.skuSaleAttrValueList.push({
+        //       saleAttrValueId:item.saleAttrValueId
+        //     })
+        //   }
+        // })
+
+        skuInfo.skuSaleAttrValueList = spuSaleAttrList.reduce((pre,item) => {
+          if(item.saleAttrValueId){
+            pre.push({
+              saleAttrValueId:item.saleAttrValueId
+            })
+          }
+          return pre
+        },[])
+
+
+      //发送请求
+      const result = await this.$API.sku.addUpdate(skuInfo)
+      if(result.code === 200){
+        //成功
+        this.$message.success('保存sku成功')
+        //返回列表页
+        this.$emit('update:visible',false)
+        //重置当前data的数据
+        this.resetData()
+      }else{
+        //失败
+        this.$message.error('保存sku失败')
+      }
+    },
 
     //设置默认图片
     setDefault(row){
