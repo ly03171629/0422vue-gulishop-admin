@@ -216,7 +216,8 @@ export default {
       })
 
       //3、category3Id需要加上
-      spuInfo.category3Id = spu.category3Id
+      //这是可以针对修改spu添加category3Id，但是添加spu的时候spu内部是没有东西的，就没办法给spuInfo添加category3Id
+      // spuInfo.category3Id = spu.category3Id
       console.log(spuInfo)
 
       //发送请求
@@ -340,7 +341,7 @@ export default {
     //点击父组件当中的修改按钮，父组件需要调用这个函数让子组件发请求获取初始化展示的数据
     initUpdateSpuData(spu) {
       this.spu = spu; //保存从父组件修改传过来的某个spu 为了后面我们可以使用它内部的数据
-
+      this.spuInfo.category3Id = spu.category3Id
       //http://localhost:9529/dev-api/admin/product/getSpuById/1122  获取对应id的spu详情
       this.getSpuInfo(spu.id);
       //http://localhost:9529/dev-api/admin/product/spuImageList/1122 获取对应id的spu的图片列表
@@ -351,7 +352,8 @@ export default {
       this.getBaseSaleAttrList();
     },
     //点击添加spu按钮，通知子组件发请求获取初始化展示数据
-    initAddSpuData() {
+    initAddSpuData(category3Id) {
+      this.spuInfo.category3Id = category3Id
       //http://localhost:9529/dev-api/admin/product/baseTrademark/getTrademarkList 获取所有的品牌列表
       this.getTrademarkList();
       //http://localhost:9529/dev-api/admin/product/baseSaleAttrList  获取所有的基础销售属性列表
